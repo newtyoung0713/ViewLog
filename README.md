@@ -37,46 +37,6 @@ To run this project, ensure you have the following installed:
 - npm (Node package manager)
 - SQLite (optional; SQLite will be automatically initialized with the project)
 
-### Installation
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/viewlog.git
-   cd viewlog
-   ```
-
-2. Install frontend dependencies:
-   ```bash
-   cd frontend
-   npm install
-   ```
-
-3. Install backend dependencies:
-   ```bash
-   cd ../backend
-   npm install
-   ```
-
-### Running the Project
-
-#### Running Frontend:
-
-1. Inside the `frontend` directory, start the development server:
-   ```bash
-   npm run dev
-   ```
-
-2. Open [http://localhost:3000](http://localhost:3000) in your browser to see the application.
-
-#### Running Backend:
-
-1. Inside the `backend` directory, start the backend API server:
-   ```bash
-   npm start
-   ```
-
-2. The backend API will be running at [http://localhost:5000](http://localhost:5000).
-
 ### Project Structure
 
 ```bash
