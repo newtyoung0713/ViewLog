@@ -1,6 +1,7 @@
 // server.js
 const express = require('express');
 const app = express();
+const bodyParser = require('body-parser');
 const sqlite3 = require('sqlite3').verbose();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
@@ -15,6 +16,24 @@ app.use(express.json());
 // Create SQLite database
 db.serialize(() => {
   db.run("CREATE TABLE Users (id INTEGER PRIMARY KEY, email TEXT UNIQUE, password TEXT)");
+
+  // Create Records Table
+  db.run(`CREATE TABLE IF NOT EXISTS Records (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    media_type TEXT NOT NULL,
+    media_id INTEGER NOT NULL,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    progress TEXT,
+    status TEXT DEFAULT 'watching',
+    FOREIGN KEY (user_id) REFERENCES Users(id)`);
+
+  // Create Media Table
+  db.run(`CREATE TABLE IF NOT EXISTS Media (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    country TEXT,
+    year INTEGER)`);
 
   // Create Genres Table
   db.run(`CREATE TABLE IF NOT EXISTS Genres (
@@ -51,20 +70,20 @@ db.serialize(() => {
     FOREIGN KEY (genre_id) REFERENCES Genres(id),
     PRIMARY KEY (drama_id, genre_id))`);
     
-  // Create TV_Shows Table
-  db.run(`CREATE TABLE IF NOT EXISTS TV_Shows (
+  // Create Variety_Shows Table
+  db.run(`CREATE TABLE IF NOT EXISTS Variety_Shows (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     title TEXT,
     country TEXT,
     season INTEGER,
     episode INTEGER)`);
-  // Create TV_Shows_Genres Relational Table
-  db.run(`CREATE TABLE IF NOT EXISTS TV_Show_Genres (
-    tv_show_id INTEGER,
+  // Create Variety_Shows_Genres Relational Table
+  db.run(`CREATE TABLE IF NOT EXISTS Variety_Shows_Genres (
+    variety_show_id INTEGER,
     genre_id INTEGER,
-    FOREIGN KEY (tv_show_id) REFERENCES TV_Shows(id),
+    FOREIGN KEY (variety_show_id) REFERENCES Variety_Shows(id),
     FOREIGN KEY (genre_id) REFERENCES Genres(id),
-    PRIMARY KEY (tv_show_id, genre_id))`);
+    PRIMARY KEY (variety_show_id, genre_id))`);
     
   // Create Animation Table
   db.run(`CREATE TABLE IF NOT EXISTS Animation (
@@ -131,6 +150,8 @@ const authenticateToken = (req, res, next) => {
     next();
   });
 };
+
+
 
 // API to get a movie
 app.get('/movies', (req, res) => {
