@@ -1,29 +1,40 @@
 // frontend/pages/login.js
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/router";
 import axios from 'axios';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [message, setMessage] = useState('');
+  const [isLoggedIn, setIsLoggedIn] = useState(false); // Track is user logging
+  const [username, setUsername] = useState(''); // For display user name
+  const router = useRouter();
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) setIsLoggedIn(true);
+  }, []);
 
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
       const response = await axios.post('http://localhost:5000/login', { email, password });
-      // localStorage.setItem('token', response.data.token); // Store JWT Token
-      // alert(response.data.message);   // Reminder log in successful
-      if (response && response.data) {
-        setMessage('Login successful: ' + response.data.token);
-        localStorage.setItem('token', response.data.token);
+      const { token, username } = response.data;
+      // Save token and username to localStorage
+      localStorage.setItem('token', token);
+      if (username) {
+        localStorage.setItem('username', username);
+        setUsername(username.split('@')[0]);
       } else {
-        console.error('Unexpected response structure:', response);
-        setMessage('Unexpected response structure');
+        console.error('Username is undefined or null.');
       }
+
+      // Update state immediately
+      setIsLoggedIn(true);
+      // Redirect to homepage
+      router.push('/');
     } catch (error) {
-      // console.error(error.response.data.error);
       console.error('Error:', error.response ? error.response.data : error.message);
-      setMessage('Login failed: ' + (error.response ? error.response.data.error : error.message));
     }
   };
 
@@ -49,7 +60,6 @@ const Login = () => {
         />
         <button type="submit">Login</button>
       </form>
-      {message && <div>{message}</div>} {/* Show the login status*/}
     </div>
   );
 };

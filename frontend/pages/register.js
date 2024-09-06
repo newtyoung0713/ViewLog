@@ -1,10 +1,12 @@
 // frontend/pages/register.js
 import { useState } from "react";
+import { useRouter } from "next/router";
 import axios from 'axios';
 
 const Register = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('')
+  const router = useRouter();
 
   const handleRegister = async (e) => {
     e.preventDefault();
@@ -12,6 +14,7 @@ const Register = () => {
       const response = await axios.post('http://localhost:5000/register', { email, password });
       alert(response.data.message);
       console.log(response.data);
+      router.push('/');
     } catch (error) {
       if (error.response) {
         console.error('Error response:', error.response.data.error);
