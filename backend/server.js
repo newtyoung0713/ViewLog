@@ -138,6 +138,15 @@ app.post('/login', (req, res) => {
   });
 });
 
+// Login API for preventing login again
+app.get('/login', (req, res) => {
+  const token = req.headers['authorization'];
+  // If logged, redirect to main page
+  if (token) res.redirect('/');
+  // If not log in, user can access login page
+  else res.render('login');
+});
+
 // Middleware to authenticate JWT tokens
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
