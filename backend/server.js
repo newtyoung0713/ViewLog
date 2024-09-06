@@ -6,10 +6,16 @@ const cors = require('cors');
 const sqlite3 = require('sqlite3').verbose();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-
+const helmet = require('helmet');
 const db = new sqlite3.Database('./viewlog.db');   // Initial SQLite
 
 const port = process.env.PORT || 5000;
+
+// app.use(helmet());
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  next();
+});
 
 // Middleware
 app.use(express.json());
@@ -96,18 +102,15 @@ app.post('/register', async (req, res) => {
   const { email, password } = req.body;
   const hashedPassword = await bcrypt.hash(password, 16);
 
-  if (!email || !password) {
-    return res.status(400).json({ error: 'Missing email or password' });
-  }
+  if (!email || !password) return res.status(400).json({ error: 'Missing email or password' });
 
-  const queryCheck = `SELECT * FROM Users WHERE email = ?`;
-  db.get(queryCheck, [email], (err, user) => {
+  db.get(`SELECT * FROM Users WHERE email = ?`, [email], (err, user) => {
     if (err) return res.status(500).json({ error: 'Database error' });
     if (user) return res.status(400).json({ error: 'Email already exists' });
     
-    const queryInsert = `INSERT INTO Users (email, password) VALUES (?, ?)`;
-    db.run(queryInsert, [email, hashedPassword], function (err) {
-      if (err && err.code === 'SQLITE_CONSTRAINT') return res.status(400).json({ error: 'Email already exists' }); 
+    db.run(`INSERT INTO Users (email, password) VALUES (?, ?)`, [email, hashedPassword], function (err) {
+      if (err && err.code === 'SQLITE_CONSTRAINT')
+        return res.status(400).json({ error: 'Email already exists' }); 
       if (err) {
         console.error('Database error:', err.message);
         return res.status(500).json({ error: err.message });
@@ -119,33 +122,18 @@ app.post('/register', async (req, res) => {
 });
 
 // Login API
-// app.post('/login', (req, res) => {
-//   const { email, password } = req.body;
-//   const query = `SELECT * FROM Users WHERE email = ?`;
-
-//   db.get(query, [email], async (err, user) => {
-//     if (err) return res.status(500).json({ error: err.message });
-//     if (!user) return res.status(401).json({ error: 'Invalid email or password' });
-//     const isValidPassword = await bcrypt.compare(password, user.password);
-//     if (!isValidPassword) return res.status(400).json({ error: 'Invalid email or password' });
-//     // Generate JWT token
-//     // const token = generateToken({ id: user.id, email: user.email });
-//     const token = jwt.sign({ email: user.email }, 'your_jwt_secret', { expiresIn: '1h' });
-//     res.json({ token });
-//   });
-// });
 app.post('/login', (req, res) => {
   const { email, password } = req.body;
-  const query = `SELECT * FROM Users WHERE email = ?`;
 
-  db.get(query, [email], (err, user) => {
+  db.get(`SELECT * FROM Users WHERE email = ?`, [email], (err, user) => {
     if (err) return res.status(500).json({ error: err.message });
     if (!user) return res.status(401).json({ error: 'User Not Found' });
     bcrypt.compare(password, user.password, (err, result) => {
       if (err) return res.status(500).json({ error: err.message });
       if (!user) return res.status(401).json({ error: 'Invalid password' });
       const token = generateToken({ id: user.id, email: user.email });
-      res.json({ token });
+      // Return token and username (email in this case)
+      res.json({ token, username: user.email });
     });
   });
 });
