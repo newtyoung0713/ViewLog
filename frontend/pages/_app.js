@@ -15,7 +15,7 @@ function MyApp({ Component, pageProps }) {
       setIsLoggedIn(true);
       setUsername(user.split('@')[0]);
     }
-  }, []);
+  }, [isLoggedIn, username]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -25,23 +25,23 @@ function MyApp({ Component, pageProps }) {
     router.push('/login');
   };
 
-  const hideNavbar = router.pathname === '/login' || router.pathname === '/register';
+  // const hideNavbar = router.pathname === '/login' || router.pathname === '/register';
 
   return (
     <div>
-      {!hideNavbar && (
-        <nav>
-          {isLoggedIn ? (
-            <>
-              <span>Welcome, {username || 'User'}!</span> | <button href="#" onClick={handleLogout}>Log out</button>
-            </>
-          ) : (
-            <>
-              <Link href="/login">Login</Link> | <Link href="/register">Register</Link>
-            </>
-          )}
-        </nav>
-      )}
+      {/* {!hideNavbar && ( */}
+      <nav>
+        {isLoggedIn ? (
+          <>
+            <span>Welcome, {username || 'User'}!</span> <button href="#" onClick={handleLogout}>Log out</button>
+          </>
+        ) : (
+          <>
+            <Link href="/login">Login</Link> | <Link href="/register">Register</Link>
+          </>
+        )}
+      </nav>
+      {/* )} */}
       <Component {...pageProps} />
     </div>
   );

@@ -1,5 +1,5 @@
 // frontend/pages/register.js
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import axios from 'axios';
 
@@ -7,6 +7,12 @@ const Register = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('')
   const router = useRouter();
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    // If logged, redirect the page to main page
+    if (token) router.push('/');
+  }, [router]);
 
   const handleRegister = async (e) => {
     e.preventDefault();

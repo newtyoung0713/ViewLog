@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import axios from 'axios';
+import Cookies from 'js-cookie';  // Setting cookie after login successful
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -12,27 +13,31 @@ const Login = () => {
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (token) setIsLoggedIn(true);
-  }, []);
+    if (token) {
+      setIsLoggedIn(true);
+      // If logged, redirect the page to main page
+      router.push('/');
+    }
+  }, [router]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
       const response = await axios.post('http://localhost:5000/login', { email, password });
       const { token, username } = response.data;
-      // Save token and username to localStorage
-      localStorage.setItem('token', token);
-      if (username) {
-        localStorage.setItem('username', username);
-        setUsername(username.split('@')[0]);
-      } else {
-        console.error('Username is undefined or null.');
-      }
 
+      Cookies.set('token', token);  // Using Cookies to store token
+
+      // Save token and username to localStorage
+      // localStorage.setItem('token', token);
+      localStorage.setItem('username', username);
+      
       // Update state immediately
       setIsLoggedIn(true);
+      setUsername(username.split('@')[0]);
+      
       // Redirect to homepage
-      router.push('/');
+      await router.push('/');
     } catch (error) {
       console.error('Error:', error.response ? error.response.data : error.message);
     }
