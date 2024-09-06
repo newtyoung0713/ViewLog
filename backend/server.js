@@ -2,6 +2,7 @@
 const express = require('express');
 const app = express();
 const bodyParser = require('body-parser');
+const cors = require('cors');
 const sqlite3 = require('sqlite3').verbose();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
@@ -12,10 +13,15 @@ const port = process.env.PORT || 5000;
 
 // Middleware
 app.use(express.json());
+app.use(cors({
+  origin: 'http://localhost:3000',
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
 // Create SQLite database
 db.serialize(() => {
-  db.run("CREATE TABLE IF NOT EXISTS Users (id INTEGER PRIMARY KEY, email TEXT UNIQUE, password TEXT)");
+  db.run("CREATE TABLE IF NOT EXISTS Users (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT UNIQUE, password TEXT)");
 
   // Create Records Table
   db.run(`CREATE TABLE IF NOT EXISTS Records (
@@ -78,7 +84,7 @@ db.serialize(() => {
     episode INTEGER,
     FOREIGN KEY (media_id) REFERENCES Media(id))`);
 });
-db.close();
+// db.close();
 
 // Helper function to generate JWT tokens
 const generateToken = (user) => {
@@ -88,27 +94,56 @@ const generateToken = (user) => {
 // Register API
 app.post('/register', async (req, res) => {
   const { email, password } = req.body;
-  // const hashedPassword = await bcrypt.hash(password, 10);
-  bcrypt.hash(password, 10, (err, hash) => {
-    if (err) return res.status(500).json({ error: err.message });
-    db.run('INSERT INTO Users (email, password) VALUES (?, ?)', [email, hash], function (err) {
-      if (err) return res.status(500).json({ error: err.message });
-      res.status(201).json({ message: 'User registered successfully', userId: this.lastID });
+  const hashedPassword = await bcrypt.hash(password, 16);
+
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Missing email or password' });
+  }
+
+  const queryCheck = `SELECT * FROM Users WHERE email = ?`;
+  db.get(queryCheck, [email], (err, user) => {
+    if (err) return res.status(500).json({ error: 'Database error' });
+    if (user) return res.status(400).json({ error: 'Email already exists' });
+    
+    const queryInsert = `INSERT INTO Users (email, password) VALUES (?, ?)`;
+    db.run(queryInsert, [email, hashedPassword], function (err) {
+      if (err && err.code === 'SQLITE_CONSTRAINT') return res.status(400).json({ error: 'Email already exists' }); 
+      if (err) {
+        console.error('Database error:', err.message);
+        return res.status(500).json({ error: err.message });
+      }
     });
+    res.status(201).json({ message: 'User registered successfully', id: this.lastID });
+    // res.status(201).json({ message: 'User registered successfully' });
   });
 });
 
 // Login API
+// app.post('/login', (req, res) => {
+//   const { email, password } = req.body;
+//   const query = `SELECT * FROM Users WHERE email = ?`;
+
+//   db.get(query, [email], async (err, user) => {
+//     if (err) return res.status(500).json({ error: err.message });
+//     if (!user) return res.status(401).json({ error: 'Invalid email or password' });
+//     const isValidPassword = await bcrypt.compare(password, user.password);
+//     if (!isValidPassword) return res.status(400).json({ error: 'Invalid email or password' });
+//     // Generate JWT token
+//     // const token = generateToken({ id: user.id, email: user.email });
+//     const token = jwt.sign({ email: user.email }, 'your_jwt_secret', { expiresIn: '1h' });
+//     res.json({ token });
+//   });
+// });
 app.post('/login', (req, res) => {
   const { email, password } = req.body;
+  const query = `SELECT * FROM Users WHERE email = ?`;
 
-  db.get('SELECT * FROM Users WHERE email = ?', [email], (err, user) => {
+  db.get(query, [email], (err, user) => {
     if (err) return res.status(500).json({ error: err.message });
     if (!user) return res.status(401).json({ error: 'User Not Found' });
     bcrypt.compare(password, user.password, (err, result) => {
       if (err) return res.status(500).json({ error: err.message });
-      if (!result) return res.status(401).json({ error: 'Invalid password' });
-
+      if (!user) return res.status(401).json({ error: 'Invalid password' });
       const token = generateToken({ id: user.id, email: user.email });
       res.json({ token });
     });
@@ -128,6 +163,11 @@ const authenticateToken = (req, res, next) => {
     next();
   });
 };
+
+// Use this middleware to protect API routes that require authentication
+app.get('/protected', authenticateToken, (req, res) => {
+  res.json({ message: 'This is a protected route', user: req.user });
+});
 
 // API to add a new watch record (for movies, dramas, etc.)
 app.post('/records', (req, res) => {
