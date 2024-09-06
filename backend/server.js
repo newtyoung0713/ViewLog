@@ -15,18 +15,18 @@ app.use(express.json());
 
 // Create SQLite database
 db.serialize(() => {
-  db.run("CREATE TABLE Users (id INTEGER PRIMARY KEY, email TEXT UNIQUE, password TEXT)");
+  db.run("CREATE TABLE IF NOT EXISTS Users (id INTEGER PRIMARY KEY, email TEXT UNIQUE, password TEXT)");
 
   // Create Records Table
   db.run(`CREATE TABLE IF NOT EXISTS Records (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
-    media_type TEXT NOT NULL,
     media_id INTEGER NOT NULL,
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
     progress TEXT,
     status TEXT DEFAULT 'watching',
-    FOREIGN KEY (user_id) REFERENCES Users(id)`);
+    FOREIGN KEY (user_id) REFERENCES Users(id),
+    FOREIGN KEY (media_id) REFERENCES Media(id))`);
 
   // Create Media Table
   db.run(`CREATE TABLE IF NOT EXISTS Media (
@@ -40,65 +40,43 @@ db.serialize(() => {
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     genre_name TEXT UNIQUE)`);
 
+  // Create Media_Genres Table
+  db.run(`CREATE TABLE IF NOT EXISTS Media_Genres (
+    media_id INTEGER,
+    genre_id INTEGER,
+    FOREIGN KEY (media_id) REFERENCES Media(id),
+    FOREIGN KEY (genre_id) REFERENCES Genres(id),
+    PRIMARY KEY (media_id, genre_id))`);
+
   // Create Movie Table
   db.run(`CREATE TABLE IF NOT EXISTS Movies (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT,
-    country TEXT,
-    year INTEGER)`);
-  // Create Movie_Genres Relational Table
-  db.run(`CREATE TABLE IF NOT EXISTS Movie_Genres (
-    movie_id INTEGER,
-    genre_id INTEGER,
-    FOREIGN KEY (movie_id) REFERENCES Movies(id),
-    FOREIGN KEY (genre_id) REFERENCES Genres(id),
-    PRIMARY KEY (movie_id, genre_id))`);
+    media_id INTEGER,
+    FOREIGN KEY (media_id) REFERENCES Media(id))`);
     
   // Create Drama Table
   db.run(`CREATE TABLE IF NOT EXISTS Drama (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT,
-    country TEXT,
+    media_id INTEGER,
     season INTEGER,
     episode INTEGER,
-    year INTEGER)`);
-  // Create Drama_Genres Relational Table
-  db.run(`CREATE TABLE IF NOT EXISTS Drama_Genres (
-    drama_id INTEGER,
-    genre_id INTEGER,
-    FOREIGN KEY (drama_id) REFERENCES Drama(id),
-    FOREIGN KEY (genre_id) REFERENCES Genres(id),
-    PRIMARY KEY (drama_id, genre_id))`);
-    
+    FOREIGN KEY (media_id) REFERENCES Media(id))`);
+      
   // Create Variety_Shows Table
   db.run(`CREATE TABLE IF NOT EXISTS Variety_Shows (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT,
-    country TEXT,
+    media_id INTEGER,
     season INTEGER,
-    episode INTEGER)`);
-  // Create Variety_Shows_Genres Relational Table
-  db.run(`CREATE TABLE IF NOT EXISTS Variety_Shows_Genres (
-    variety_show_id INTEGER,
-    genre_id INTEGER,
-    FOREIGN KEY (variety_show_id) REFERENCES Variety_Shows(id),
-    FOREIGN KEY (genre_id) REFERENCES Genres(id),
-    PRIMARY KEY (variety_show_id, genre_id))`);
+    episode INTEGER,
+    FOREIGN KEY (media_id) REFERENCES Media(id))`);
     
   // Create Animation Table
   db.run(`CREATE TABLE IF NOT EXISTS Animation (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT,
-    country TEXT,
+    media_id INTEGER,
     season INTEGER,
-    episode INTEGER)`);
-  // Create Animation_Genres Relational Table
-  db.run(`CREATE TABLE IF NOT EXISTS Animation_Genres (
-    animation_id INTEGER,
-    genre_id INTEGER,
-    FOREIGN KEY (animation_id) REFERENCES Animation(id),
-    FOREIGN KEY (genre_id) REFERENCES Genres(id),
-    PRIMARY KEY (animation_id, genre_id))`);
+    episode INTEGER,
+    FOREIGN KEY (media_id) REFERENCES Media(id))`);
 });
 db.close();
 
@@ -115,7 +93,7 @@ app.post('/register', async (req, res) => {
     if (err) return res.status(500).json({ error: err.message });
     db.run('INSERT INTO Users (email, password) VALUES (?, ?)', [email, hash], function (err) {
       if (err) return res.status(500).json({ error: err.message });
-      res.status(201).json({ id: this.lastID });
+      res.status(201).json({ message: 'User registered successfully', userId: this.lastID });
     });
   });
 });
@@ -151,7 +129,47 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
+// API to add a new watch record (for movies, dramas, etc.)
+app.post('/records', (req, res) => {
+  const { media_id, progress, status } = req.body;
+  const user_id = req.user.id;
 
+  db.run(`INSERT INTO Records (user_id, media_id, progress, status) VALUES (?, ?, ?, ?)`,
+    [user_id, media_id, progress, status],
+    function (err) {
+      if (err) return res.status(500).json({ error: err.message });
+      res.status(201).json({ record_id: this.lastID });
+    }
+  );
+});
+
+// API to update a watch record
+app.put('/records/:id', (req, res) => {
+  const record_id = req.params.id;
+  const { progress, status } = req.body;
+  const user_id = req.user.id;
+
+  db.run(`UPDATE Records SET progress = ?, status = ? WHERE id = ? AND user_id = ?`,
+    [progress, status, record_id, user_id],
+    function (err) {
+      if (err) return res.status(500).json({ error: err.message });
+      if (this.changes === 0) return res.status(404).json({ error: 'Record Not Found' });
+      res.json({ message: 'Record updated successfully' });
+    }
+  );
+});
+
+// API to get watch records for the authenticated user
+app.get('/records', (req, res) => {
+  const user_id = req.user.id;
+
+  db.all(`SELECT Records.*, Media.title FROM Records
+          JOIN Media ON Records.media_id = Media.id
+          WHERE Records.user_id = ?`, [user_id], (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json(rows);
+          });
+});
 
 // API to get a movie
 app.get('/movies', (req, res) => {
