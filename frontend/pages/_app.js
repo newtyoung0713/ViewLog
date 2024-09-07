@@ -1,4 +1,5 @@
 // frontend/pages/_app.js
+import Head from 'next/head';
 import { useEffect, useState } from "react";
 import Link from 'next/link';
 import { useRouter } from "next/router";
@@ -28,7 +29,11 @@ function MyApp({ Component, pageProps }) {
   // const hideNavbar = router.pathname === '/login' || router.pathname === '/register';
 
   return (
-    <div>
+    <>
+      <Head>
+        <title>ViewLog</title>
+        <meta name='description' content='This is a website to record the log for the user' />
+      </Head>
       {/* {!hideNavbar && ( */}
       <nav>
         {isLoggedIn ? (
@@ -43,7 +48,7 @@ function MyApp({ Component, pageProps }) {
       </nav>
       {/* )} */}
       <Component {...pageProps} />
-    </div>
+    </>
   );
 }
 
