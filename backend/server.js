@@ -11,7 +11,6 @@ const db = new sqlite3.Database('./viewlog.db');   // Initial SQLite
 
 const port = process.env.PORT || 5000;
 
-// app.use(helmet());
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   next();
@@ -35,16 +34,15 @@ db.serialize(() => {
     user_id INTEGER NOT NULL,
     media_id INTEGER NOT NULL,
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-    progress TEXT,
     status TEXT DEFAULT 'watching',
     FOREIGN KEY (user_id) REFERENCES Users(id),
     FOREIGN KEY (media_id) REFERENCES Media(id))`);
-
+    
   // Create Media Table
   db.run(`CREATE TABLE IF NOT EXISTS Media (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     title TEXT NOT NULL,
-    country TEXT,
+    country_code CHAR(3),
     year INTEGER)`);
 
   // Create Genres Table
@@ -117,7 +115,6 @@ app.post('/register', async (req, res) => {
       }
     });
     res.status(201).json({ message: 'User registered successfully', id: this.lastID });
-    // res.status(201).json({ message: 'User registered successfully' });
   });
 });
 
@@ -167,34 +164,78 @@ app.get('/protected', authenticateToken, (req, res) => {
 });
 
 // API to add a new watch record (for movies, dramas, etc.)
-app.post('/records', (req, res) => {
-  const { media_id, progress, status } = req.body;
-  const user_id = req.user.id;
+app.post('/addRecord', (req, res) => {
+  const { mediaType, title, countryCode, year, season, episode, status } = req.body;
+  const token = req.headers.authorization?.split(' ')[1]; // Bearer toke
 
-  db.run(`INSERT INTO Records (user_id, media_id, progress, status) VALUES (?, ?, ?, ?)`,
-    [user_id, media_id, progress, status],
-    function (err) {
+  if (!token) return res.status(401).json({ error: 'Unauthorized' });
+
+  jwt.verify(token, 'your_jwt_secret', (err, decoded) => {
+    if (err) return res.status(500).json({ error: 'Invalid token' });
+    const userId = decoded.id;
+
+    db.run(`INSERT INTO Media (title, country_code, year) VALUES (?, ?, ?)`,
+      [title, countryCode, year], function(err) {
       if (err) return res.status(500).json({ error: err.message });
-      res.status(201).json({ record_id: this.lastID });
-    }
-  );
+      const mediaId = this.lastID;
+
+      if (mediaType === 'movie') {
+        db.run(`INSERT INTO Movies (media_id) VALUES (?)`, [mediaId], function(err) {
+          if (err) return res.status(500).json({ error: err.message });
+        });
+      } else if (mediaType === 'drama') {
+        db.run(`INSERT INTO Drama (media_id, season, episode) VALUES (?, ?, ?)`, [mediaId, season, episode], function(err) {
+          if (err) return res.status(500).json({ error: err.message });
+        });
+      } else if (mediaType === 'variety_show') {
+        db.run(`INSERT INTO Variety_Shows (media_id, season, episode) VALUES (?, ?, ?)`, [mediaId, season, episode], function(err) {
+          if (err) return res.status(500).json({ error: err.message });
+        });
+      } else if (mediaType === 'animation') {
+        db.run(`INSERT INTO Animation (media_id, season, episode) VALUES (?, ?, ?)`, [mediaId, season, episode], function(err) {
+          if (err) return res.status(500).json({ error: err.message });
+        });
+      }
+      
+      db.run(`INSERT INTO Records (user_id, media_id, status) VALUES (?, ?, ?)`,
+        [userId, mediaId, status],
+        function (err) {
+          if (err) return res.status(500).json({ error: err.message });
+          res.status(201).json({ message: 'Record added successfully' });
+      });
+    });
+  });
 });
 
-// API to update a watch record
-app.put('/records/:id', (req, res) => {
-  const record_id = req.params.id;
-  const { progress, status } = req.body;
-  const user_id = req.user.id;
+// API to get media options for the form
+app.get('/media', (req, res) => {
+  const mediaTypes = ['Movies', 'Drama', 'Variety_Shows', 'Animation'];
+  const mediaOptions = [];
 
-  db.run(`UPDATE Records SET progress = ?, status = ? WHERE id = ? AND user_id = ?`,
-    [progress, status, record_id, user_id],
-    function (err) {
+  mediaTypes.forEach(type => {
+    db.all(`SELECT id, title FROM ${type}`, (err, rows) => {
       if (err) return res.status(500).json({ error: err.message });
-      if (this.changes === 0) return res.status(404).json({ error: 'Record Not Found' });
-      res.json({ message: 'Record updated successfully' });
-    }
-  );
+      mediaOptions.push(...rows);
+      if (mediaOptions.length === mediaTypes.length) res.json(mediaOptions);
+    });
+  });
 });
+
+// // API to update a watch record
+// app.put('/records/:id', (req, res) => {
+//   const record_id = req.params.id;
+//   const { progress, status } = req.body;
+//   const user_id = req.user.id;
+
+//   db.run(`UPDATE Records SET progress = ?, status = ? WHERE id = ? AND user_id = ?`,
+//     [progress, status, record_id, user_id],
+//     function (err) {
+//       if (err) return res.status(500).json({ error: err.message });
+//       if (this.changes === 0) return res.status(404).json({ error: 'Record Not Found' });
+//       res.json({ message: 'Record updated successfully' });
+//     }
+//   );
+// });
 
 // API to get watch records for the authenticated user
 app.get('/records', (req, res) => {
