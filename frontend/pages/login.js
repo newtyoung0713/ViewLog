@@ -29,7 +29,6 @@ const Login = () => {
       Cookies.set('token', token);  // Using Cookies to store token
 
       // Save token and username to localStorage
-      // localStorage.setItem('token', token);
       localStorage.setItem('username', username);
       
       // Update state immediately
