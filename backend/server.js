@@ -1,20 +1,17 @@
 // server.js
 const express = require('express');
+const helmet = require('helmet');
 const app = express();
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const sqlite3 = require('sqlite3').verbose();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const helmet = require('helmet');
 const db = new sqlite3.Database('./viewlog.db');   // Initial SQLite
 
 const port = process.env.PORT || 5000;
 
-app.use((req, res, next) => {
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  next();
-});
+app.use(helmet());
 
 // Middleware
 app.use(express.json());
@@ -23,6 +20,11 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  next();
+});
 
 // Create SQLite database
 db.serialize(() => {
@@ -88,32 +90,27 @@ db.serialize(() => {
     episode INTEGER,
     FOREIGN KEY (media_id) REFERENCES Media(id))`);
 });
-// db.close();
-
-// Helper function to generate JWT tokens
-const generateToken = (user) => {
-  return jwt.sign(user, 'your_jwt_secret', { expiresIn: '1h' });
-};
 
 // Register API
 app.post('/register', async (req, res) => {
   const { email, password } = req.body;
+  if (!email || !password) return res.status(400).json({ error: 'Missing email or password' });
+  
   const hashedPassword = await bcrypt.hash(password, 16);
 
-  if (!email || !password) return res.status(400).json({ error: 'Missing email or password' });
-
+  // Searching is there any same email account in database
   db.get(`SELECT * FROM Users WHERE email = ?`, [email], (err, user) => {
     if (err) return res.status(500).json({ error: 'Database error' });
     if (user) return res.status(400).json({ error: 'Email already exists' });
     
+    // If the user is not exist, then insertion a new user
     db.run(`INSERT INTO Users (email, password) VALUES (?, ?)`, [email, hashedPassword], function (err) {
-      if (err && err.code === 'SQLITE_CONSTRAINT')
-        return res.status(400).json({ error: 'Email already exists' }); 
       if (err) {
         console.error('Database error:', err.message);
         return res.status(500).json({ error: err.message });
       }
     });
+    // Return a successful insertion message
     res.status(201).json({ message: 'User registered successfully', id: this.lastID });
   });
 });
@@ -121,14 +118,20 @@ app.post('/register', async (req, res) => {
 // Login API
 app.post('/login', (req, res) => {
   const { email, password } = req.body;
+  if (!email || !password) return res.status(400).json({ error: 'Missing email or password' });
 
+  // Checking the user from database
   db.get(`SELECT * FROM Users WHERE email = ?`, [email], (err, user) => {
     if (err) return res.status(500).json({ error: err.message });
     if (!user) return res.status(401).json({ error: 'User Not Found' });
-    bcrypt.compare(password, user.password, (err, result) => {
+    
+    // Comparing is the password matching
+    bcrypt.compare(password, user.password, (err, isMatch) => {
       if (err) return res.status(500).json({ error: err.message });
-      if (!user) return res.status(401).json({ error: 'Invalid password' });
-      const token = generateToken({ id: user.id, email: user.email });
+      if (!isMatch) return res.status(401).json({ error: 'Invalid password' });
+      
+      // Generating a JWT token
+      const token = jwt.sign({ id: user.id, email: user.email}, 'your_jwt_secret', { expiresIn: '1h' });
       // Return token and username (email in this case)
       res.json({ token, username: user.email });
     });
@@ -139,9 +142,14 @@ app.post('/login', (req, res) => {
 app.get('/login', (req, res) => {
   const token = req.headers['authorization'];
   // If logged, redirect to main page
-  if (token) res.redirect('/');
-  // If not log in, user can access login page
-  else res.render('login');
+  if (token) {
+    res.redirect('/');
+    return res.status(200).json({ message: 'Already logged in' });
+  } else {
+    // If not log in, user can access login page
+    res.render('login');
+    return res.status(401).json({ message: 'Not logged in' });
+  }
 });
 
 // Middleware to authenticate JWT tokens
@@ -207,19 +215,19 @@ app.post('/addRecord', (req, res) => {
   });
 });
 
-// API to get media options for the form
-app.get('/media', (req, res) => {
-  const mediaTypes = ['Movies', 'Drama', 'Variety_Shows', 'Animation'];
-  const mediaOptions = [];
+// // API to get media options for the form
+// app.get('/media', (req, res) => {
+//   const mediaTypes = ['Movies', 'Drama', 'Variety_Shows', 'Animation'];
+//   const mediaOptions = [];
 
-  mediaTypes.forEach(type => {
-    db.all(`SELECT id, title FROM ${type}`, (err, rows) => {
-      if (err) return res.status(500).json({ error: err.message });
-      mediaOptions.push(...rows);
-      if (mediaOptions.length === mediaTypes.length) res.json(mediaOptions);
-    });
-  });
-});
+//   mediaTypes.forEach(type => {
+//     db.all(`SELECT id, title FROM ${type}`, (err, rows) => {
+//       if (err) return res.status(500).json({ error: err.message });
+//       mediaOptions.push(...rows);
+//       if (mediaOptions.length === mediaTypes.length) res.json(mediaOptions);
+//     });
+//   });
+// });
 
 // // API to update a watch record
 // app.put('/records/:id', (req, res) => {
