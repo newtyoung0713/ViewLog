@@ -2,7 +2,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import axios from 'axios';
-import Cookies from 'js-cookie';
 
 const AddRecord = () => {
   const [mediaType, setMediaType] = useState('');
@@ -21,8 +20,8 @@ const AddRecord = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const token = Cookies.get('token');
-
+    const token = localStorage.getItem('token');
+    console.log(token);
     const recordData = {
       mediaType, title, countryCode, year, status,
     };
@@ -33,9 +32,7 @@ const AddRecord = () => {
     }
 
     try {
-      await axios.post('http://localhost:5000/addRecord',
-        recordData, { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await axios.post('/api/addRecord', recordData, { headers: { Authorization: `Bearer ${token}` } });
       router.push('/'); // Redirect to homepage or another page
     } catch (error) {
       console.error('Error:', error.response ? error.response.data : error.message);
