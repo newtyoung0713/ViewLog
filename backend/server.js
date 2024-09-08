@@ -18,7 +18,8 @@ app.use(express.json());
 app.use(cors({
   origin: 'http://localhost:3000',
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
 }));
 
 app.use((req, res, next) => {
@@ -28,7 +29,10 @@ app.use((req, res, next) => {
 
 // Create SQLite database
 db.serialize(() => {
-  db.run("CREATE TABLE IF NOT EXISTS Users (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT UNIQUE, password TEXT)");
+  db.run(`CREATE TABLE IF NOT EXISTS Users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT UNIQUE NOT NULL,
+    password TEXT NOT NULL)`);
 
   // Create Records Table
   db.run(`CREATE TABLE IF NOT EXISTS Records (
@@ -36,9 +40,9 @@ db.serialize(() => {
     user_id INTEGER NOT NULL,
     media_id INTEGER NOT NULL,
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-    status TEXT DEFAULT 'watching',
-    FOREIGN KEY (user_id) REFERENCES Users(id),
-    FOREIGN KEY (media_id) REFERENCES Media(id))`);
+    status TEXT DEFAULT 'watching' CHECK(status IN ('watching', 'completed', 'on hold', 'dropped')),
+    FOREIGN KEY (user_id) REFERENCES Users(id) ON DELETE CASCADE,
+    FOREIGN KEY (media_id) REFERENCES Media(id) ON DELETE CASCADE)`);
     
   // Create Media Table
   db.run(`CREATE TABLE IF NOT EXISTS Media (
@@ -50,46 +54,52 @@ db.serialize(() => {
   // Create Genres Table
   db.run(`CREATE TABLE IF NOT EXISTS Genres (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    genre_name TEXT UNIQUE)`);
+    genre_name TEXT UNIQUE NOT NULL)`);
 
   // Create Media_Genres Table
   db.run(`CREATE TABLE IF NOT EXISTS Media_Genres (
-    media_id INTEGER,
-    genre_id INTEGER,
-    FOREIGN KEY (media_id) REFERENCES Media(id),
-    FOREIGN KEY (genre_id) REFERENCES Genres(id),
+    media_id INTEGER NOT NULL,
+    genre_id INTEGER NOT NULL,
+    FOREIGN KEY (media_id) REFERENCES Media(id) ON DELETE CASCADE,
+    FOREIGN KEY (genre_id) REFERENCES Genres(id) ON DELETE CASCADE,
     PRIMARY KEY (media_id, genre_id))`);
 
   // Create Movie Table
   db.run(`CREATE TABLE IF NOT EXISTS Movies (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    media_id INTEGER,
-    FOREIGN KEY (media_id) REFERENCES Media(id))`);
+    media_id INTEGER NOT NULL,
+    FOREIGN KEY (media_id) REFERENCES Media(id) ON DELETE CASCADE)`);
     
   // Create Drama Table
-  db.run(`CREATE TABLE IF NOT EXISTS Drama (
+  db.run(`CREATE TABLE IF NOT EXISTS Dramas (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    media_id INTEGER,
+    media_id INTEGER NOT NULL,
     season INTEGER,
     episode INTEGER,
-    FOREIGN KEY (media_id) REFERENCES Media(id))`);
+    FOREIGN KEY (media_id) REFERENCES Media(id) ON DELETE CASCADE)`);
       
   // Create Variety_Shows Table
   db.run(`CREATE TABLE IF NOT EXISTS Variety_Shows (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    media_id INTEGER,
+    media_id INTEGER NOT NULL,
     season INTEGER,
     episode INTEGER,
-    FOREIGN KEY (media_id) REFERENCES Media(id))`);
+    FOREIGN KEY (media_id) REFERENCES Media(id) ON DELETE CASCADE)`);
     
   // Create Animation Table
-  db.run(`CREATE TABLE IF NOT EXISTS Animation (
+  db.run(`CREATE TABLE IF NOT EXISTS Animations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    media_id INTEGER,
+    media_id INTEGER NOT NULL,
     season INTEGER,
     episode INTEGER,
-    FOREIGN KEY (media_id) REFERENCES Media(id))`);
+    FOREIGN KEY (media_id) REFERENCES Media(id) ON DELETE CASCADE)`);
 });
+
+// Helper function to generate JWT tokens
+const generateToken = (user) => {
+  // return jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' });
+  return jwt.sign(user, 'your_jwt_secret', { expiresIn: '1h' });
+};
 
 // Register API
 app.post('/register', async (req, res) => {
@@ -131,7 +141,7 @@ app.post('/login', (req, res) => {
       if (!isMatch) return res.status(401).json({ error: 'Invalid password' });
       
       // Generating a JWT token
-      const token = jwt.sign({ id: user.id, email: user.email}, 'your_jwt_secret', { expiresIn: '1h' });
+      const token = generateToken({ id: user.id, username: user.username });
       // Return token and username (email in this case)
       res.json({ token, username: user.email });
     });
@@ -159,6 +169,7 @@ const authenticateToken = (req, res, next) => {
 
   if (token == null) return res.status(401).json({ error: 'Token missing' });
 
+  // jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, user) => {
   jwt.verify(token, 'your_jwt_secret', (err, user) => {
     if (err) return res.status(403).json({ error: 'Invalid token' });
     req.user = user;
@@ -166,16 +177,45 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
-// Use this middleware to protect API routes that require authentication
-app.get('/protected', authenticateToken, (req, res) => {
-  res.json({ message: 'This is a protected route', user: req.user });
-});
+// // Use this middleware to protect API routes that require authentication
+// app.get('/protected', authenticateToken, (req, res) => {
+//   res.json({ message: 'This is a protected route', user: req.user });
+// });
+
+// // API to get media options for the form
+// app.get('/media', (req, res) => {
+//   const mediaTypes = ['Movies', 'Drama', 'Variety_Shows', 'Animation'];
+//   const mediaOptions = [];
+
+//   mediaTypes.forEach(type => {
+//     db.all(`SELECT id, title FROM ${type}`, (err, rows) => {
+//       if (err) return res.status(500).json({ error: err.message });
+//       mediaOptions.push(...rows);
+//       if (mediaOptions.length === mediaTypes.length) res.json(mediaOptions);
+//     });
+//   });
+// });
+
+// // API to get watch records for the authenticated user
+// app.get('/records', (req, res) => {
+//   const user_id = req.user.id;
+
+//   db.all(`SELECT Records.id, Media.title, Media.country_code, Media.year, Records.timestamp, Records.status
+//           FROM Records
+//           JOIN Media ON Records.media_id = Media.id
+//           WHERE Records.user_id = ?`, [user_id], (err, rows) => {
+//     if (err) return res.status(500).json({ error: err.message });
+//     res.json(rows);
+//   });
+// });
 
 // API to add a new watch record (for movies, dramas, etc.)
-app.post('/addRecord', (req, res) => {
+app.post('/addRecord', authenticateToken, (req, res) => {
   const { mediaType, title, countryCode, year, season, episode, status } = req.body;
   const token = req.headers.authorization?.split(' ')[1]; // Bearer toke
-
+  console.log(req.headers.authorization);
+  const decoded = jwt.decode(token);
+  console.log(decoded.exp);
   if (!token) return res.status(401).json({ error: 'Unauthorized' });
 
   jwt.verify(token, 'your_jwt_secret', (err, decoded) => {
@@ -192,7 +232,7 @@ app.post('/addRecord', (req, res) => {
           if (err) return res.status(500).json({ error: err.message });
         });
       } else if (mediaType === 'drama') {
-        db.run(`INSERT INTO Drama (media_id, season, episode) VALUES (?, ?, ?)`, [mediaId, season, episode], function(err) {
+        db.run(`INSERT INTO Dramas (media_id, season, episode) VALUES (?, ?, ?)`, [mediaId, season, episode], function(err) {
           if (err) return res.status(500).json({ error: err.message });
         });
       } else if (mediaType === 'variety_show') {
@@ -200,7 +240,7 @@ app.post('/addRecord', (req, res) => {
           if (err) return res.status(500).json({ error: err.message });
         });
       } else if (mediaType === 'animation') {
-        db.run(`INSERT INTO Animation (media_id, season, episode) VALUES (?, ?, ?)`, [mediaId, season, episode], function(err) {
+        db.run(`INSERT INTO Animations (media_id, season, episode) VALUES (?, ?, ?)`, [mediaId, season, episode], function(err) {
           if (err) return res.status(500).json({ error: err.message });
         });
       }
@@ -215,18 +255,19 @@ app.post('/addRecord', (req, res) => {
   });
 });
 
-// // API to get media options for the form
-// app.get('/media', (req, res) => {
-//   const mediaTypes = ['Movies', 'Drama', 'Variety_Shows', 'Animation'];
-//   const mediaOptions = [];
+// // API to get a watch record
+// app.get('/records/:id', (req, res) => {
+//   const userId = req.params.userId;
 
-//   mediaTypes.forEach(type => {
-//     db.all(`SELECT id, title FROM ${type}`, (err, rows) => {
+//   db.run(`SELECT Records.id, Media.title, Records.status, Media.year, Media.country_code
+//           FROM Records
+//           JOIN Media ON Records.media_id = Media.id
+//           WHERE Records.user_id = ?`,
+//     [userId], (err, rows) => {
 //       if (err) return res.status(500).json({ error: err.message });
-//       mediaOptions.push(...rows);
-//       if (mediaOptions.length === mediaTypes.length) res.json(mediaOptions);
-//     });
-//   });
+//       res.json(rows);
+//     }
+//   );
 // });
 
 // // API to update a watch record
@@ -245,54 +286,53 @@ app.post('/addRecord', (req, res) => {
 //   );
 // });
 
-// API to get watch records for the authenticated user
-app.get('/records', (req, res) => {
-  const user_id = req.user.id;
+// // API to delete a watch record
+// app.delete('/records/:id', (req, res) => {
+//   // const record_id = req.params.id;
+//   // const user_id = req.user.id;
 
-  db.all(`SELECT Records.*, Media.title FROM Records
-          JOIN Media ON Records.media_id = Media.id
-          WHERE Records.user_id = ?`, [user_id], (err, rows) => {
-            if (err) return res.status(500).json({ error: err.message });
-            res.json(rows);
-          });
-});
+//   db.run(`DELETE FROM Records WHERE id = ?`, [req.params.id], function (err) {
+//     if (err) return res.status(500).json({ error: err.message });
+//     res.json({ deleted: this.changes });
+//   });
+// });
 
-// API to get a movie
-app.get('/movies', (req, res) => {
-  db.all('SELECT * FROM Movies', (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(rows);
-  });
-});
+// // API to get a movie
+// app.get('/movies', (req, res) => {
+//   db.all('SELECT * FROM Movies', (err, rows) => {
+//     if (err) return res.status(500).json({ error: err.message });
+//     res.json(rows);
+//   });
+// });
 
-// API to get a movie by ID
-app.get('/movies/:id', (req, res) => {
-  const id = req.params.id;
-  db.get('SELECT * FROM Movies WHERE id = ?', [id], (err, row) => {
-    if (err) return res.status(500).json({ error: err.message });
-    if (!row) return res.status(404).json({ error: 'Movie Not Found' });
-    res.json(row);
-  });
-});
+// // API to get a movie by ID
+// app.get('/movies/:id', (req, res) => {
+//   const id = req.params.id;
+//   db.get('SELECT * FROM Movies WHERE id = ?', [id], (err, row) => {
+//     if (err) return res.status(500).json({ error: err.message });
+//     if (!row) return res.status(404).json({ error: 'Movie Not Found' });
+//     res.json(row);
+//   });
+// });
 
-// API to get a genre
-app.get('/genres', (req, res) => {
-  db.all('SELECT * FROM Genres', (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(rows);
-  });
-});
+// // API to get a genre
+// app.get('/genres', (req, res) => {
+//   db.all('SELECT * FROM Genres', (err, rows) => {
+//     if (err) return res.status(500).json({ error: err.message });
+//     res.json(rows);
+//   });
+// });
 
-// API to get a genres of a movie
-app.get('/movies/:id/genres', (req, res) => {
-  const id = req.params.id;
-  db.all(`SELECT Genres.* FROM Genres
-          JOIN Movie_Genres ON Genres.id = Movie_Genres.genre_id
-          WHERE Movie_Genres.movie_id = ?`, [id], (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(rows);
-  });
-});
+// // API to get a genres of a movie
+// app.get('/movies/:id/genres', (req, res) => {
+//   const id = req.params.id;
+//   db.all(`SELECT Genres.* FROM Genres
+//           JOIN Movie_Genres ON Genres.id = Movie_Genres.genre_id
+//           WHERE Movie_Genres.movie_id = ?`, [id], (err, rows) => {
+//     if (err) return res.status(500).json({ error: err.message });
+//     res.json(rows);
+//   });
+// });
 
 app.get('/', (req, res) => {
   res.send('Welcome to the ViewLog API');
