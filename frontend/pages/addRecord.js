@@ -24,7 +24,7 @@ const AddRecord = () => {
     const token = Cookies.get('token');
 
     const recordData = {
-      mediaType, title, country, year, status,
+      mediaType, title, countryCode, year, status,
     };
 
     if (mediaType === 'drama' || mediaType === 'variety_show' || mediaType === 'animation') {

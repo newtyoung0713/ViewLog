@@ -2,7 +2,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import axios from 'axios';
-import Cookies from 'js-cookie';  // Setting cookie after login successful
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -23,12 +22,11 @@ const Login = () => {
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post('http://localhost:5000/login', { email, password });
+      const response = await axios.post('/api/login', { email, password });
       const { token, username } = response.data;
 
-      Cookies.set('token', token);  // Using Cookies to store token
-
       // Save token and username to localStorage
+      localStorage.setItem('token', token);
       localStorage.setItem('username', username);
       
       // Update state immediately

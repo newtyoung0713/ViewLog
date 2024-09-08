@@ -17,7 +17,7 @@ const Register = () => {
   const handleRegister = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post('http://localhost:5000/register', { email, password });
+      const response = await axios.post('/api/register', { email, password });
       alert(response.data.message);
       console.log(response.data);
       router.push('/');

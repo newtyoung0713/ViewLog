@@ -26,7 +26,7 @@ function MyApp({ Component, pageProps }) {
     router.push('/login');
   };
 
-  // const hideNavbar = router.pathname === '/login' || router.pathname === '/register';
+  const hideNavbar = router.pathname === '/login' || router.pathname === '/register';
 
   return (
     <>
@@ -34,11 +34,12 @@ function MyApp({ Component, pageProps }) {
         <title>ViewLog</title>
         <meta name='description' content='This is a website to record the log for the user' />
       </Head>
-      {/* {!hideNavbar && ( */}
+      {!hideNavbar && (
       <nav>
         {isLoggedIn ? (
           <>
             <span>Welcome, {username || 'User'}!</span> <button href="#" onClick={handleLogout}>Log out</button>
+            <br /><Link href="/addRecord">Add a record</Link>
           </>
         ) : (
           <>
@@ -46,7 +47,7 @@ function MyApp({ Component, pageProps }) {
           </>
         )}
       </nav>
-      {/* )} */}
+      )}
       <Component {...pageProps} />
     </>
   );
