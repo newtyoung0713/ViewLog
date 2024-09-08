@@ -7,7 +7,8 @@ const cors = require('cors');
 const sqlite3 = require('sqlite3').verbose();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const db = new sqlite3.Database('./viewlog.db');   // Initial SQLite
+const path = require('path')
+const db = new sqlite3.Database(path.join(__dirname, 'viewlog.db'));   // Initial SQLite
 
 const port = process.env.PORT || 5000;
 
@@ -182,32 +183,23 @@ const authenticateToken = (req, res, next) => {
 //   res.json({ message: 'This is a protected route', user: req.user });
 // });
 
-// // API to get media options for the form
-// app.get('/media', (req, res) => {
-//   const mediaTypes = ['Movies', 'Drama', 'Variety_Shows', 'Animation'];
-//   const mediaOptions = [];
+// API to get watch records for the authenticated user
+app.get('/records', (req, res) => {
+  console.log('req.user:', req.user);
+  const user_id = req.user.id;
 
-//   mediaTypes.forEach(type => {
-//     db.all(`SELECT id, title FROM ${type}`, (err, rows) => {
-//       if (err) return res.status(500).json({ error: err.message });
-//       mediaOptions.push(...rows);
-//       if (mediaOptions.length === mediaTypes.length) res.json(mediaOptions);
-//     });
-//   });
-// });
+  db.all(`SELECT Records.id, Media.title, Media.country_code, Media.year, Records.timestamp, Records.status
+          FROM Records
+          JOIN Media ON Records.media_id = Media.id
+          WHERE Records.user_id = ?`, [user_id], (err, rows) => {
+    if (err) {
+      console.error('Database query error:', err.message);
+      return res.status(500).json({ error: err.message });
+    }
+    res.json(rows);
+  });
+});
 
-// // API to get watch records for the authenticated user
-// app.get('/records', (req, res) => {
-//   const user_id = req.user.id;
-
-//   db.all(`SELECT Records.id, Media.title, Media.country_code, Media.year, Records.timestamp, Records.status
-//           FROM Records
-//           JOIN Media ON Records.media_id = Media.id
-//           WHERE Records.user_id = ?`, [user_id], (err, rows) => {
-//     if (err) return res.status(500).json({ error: err.message });
-//     res.json(rows);
-//   });
-// });
 
 // API to add a new watch record (for movies, dramas, etc.)
 app.post('/addRecord', authenticateToken, (req, res) => {
