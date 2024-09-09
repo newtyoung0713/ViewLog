@@ -34,7 +34,7 @@ const Login = () => {
       setUsername(username.split('@')[0]);
       
       // Redirect to homepage
-      await router.push('/');
+      await router.push('/records');
     } catch (error) {
       console.error('Error:', error.response ? error.response.data : error.message);
     }

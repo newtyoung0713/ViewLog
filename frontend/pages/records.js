@@ -54,7 +54,19 @@ const Records = () => {
         <ul>
           {records.map(record => (
             <li key={record.id}>
-              <span>{record.title}</span> | <span>{record.country_code}</span> | <span>{record.year}</span> | <span>{record.status}</span>
+              <span>{record.title}</span> |
+              <span> {record.country_code}</span> |
+              {record.d_s && record.d_e && (
+                <span> Season: {record.d_s}, Episode: {record.d_e}</span>
+              )}
+              {record.vs_s && record.vs_e && (
+                <span> Season: {record.vs_s}, Episode: {record.vs_e}</span>
+              )}
+              {record.a_s && record.a_e && (
+                <span> Season: {record.a_s}, Episode: {record.a_e}</span>
+              )} |
+              <span> {record.year}</span> |
+              <span> {record.status} </span>
               <button onClick={() => handleEdit(record.id)}>Update</button>
             </li>
           ))}
