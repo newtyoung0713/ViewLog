@@ -5,39 +5,63 @@ import axios from 'axios';
 
 const Records = () => {
   const [records, setRecords] = useState([]);
+  const [token, setToken] = useState(null);
+  const [loading, setLoading] = useState(true); // Add a loading state
+  const [error, setError] = useState(null); // Add an error state
   const router = useRouter();
 
   useEffect(() => {
-    axios.get('/api/records')
-         .then(response => {
-            console.log('API response data:', response.data);
-            if (Array.isArray(response.data)) {
-              setRecords(response.data);
-            } else {
-              console.error('Unexpected API response format:', response.data);
-            }
-          })
-         .catch(error => console.error('Error fetching records:', error));
+    // This will run only in the client-side after the component mounts
+    if (typeof window !== 'undefined') {
+      const storedToken = localStorage.getItem('token');
+      setToken(storedToken);
+    }
   }, []);
+
+  useEffect(() => {
+    if (token) {
+      axios.get('/api/records', {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+      .then(response => {
+        if (response.data && Array.isArray(response.data)) {
+          setRecords(response.data);  // Ensure that we set the records if data is an array
+        } else {
+          setRecords([]); // If data is not in the expected format, set records to an empty array
+        }
+        setLoading(false);
+        console.log('API response data:', response.data);
+      })
+      .catch(error => {
+        console.error('Error fetching records:', error);
+        setError('Failed to fetch records.');
+        setLoading(false);
+      });
+    }
+  }, [token]);
 
   const handleEdit = (id) => { router.push(`/editRecord/${id}`) };
 
+  if (loading) return <div>Loading...</div>;  // Show loading message while waiting for data
+  if (error) return <div>{error}</div>;  // Show error message if something went wrong
   return (
     <div>
       <h1>Your Watching Records</h1>
       <button onClick={() => router.push('/addRecord')}>Add New Record</button>
-      <ul>
-        {Array.isArray(records) && records.length > 0 ? (
-          records.map(record => (
-          <li key={record.id}>
-            <span>{record.title}</span> | <span>{record.country_code}</span> | <span>{record.year}</span> | <span>{record.status}</span>
-            <button onClick={() => handleEdit(record.id)}>Update</button>
-          </li>
-          ))
-        ) : (
-            <li>No Records Found</li>
-        )}
-      </ul>
+      {records.length > 0 ? (
+        <ul>
+          {records.map(record => (
+            <li key={record.id}>
+              <span>{record.title}</span> | <span>{record.country_code}</span> | <span>{record.year}</span> | <span>{record.status}</span>
+              <button onClick={() => handleEdit(record.id)}>Update</button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <div>No Records Found</div>
+      )}
     </div>
   );
 };
