@@ -98,7 +98,6 @@ db.serialize(() => {
 
 // Helper function to generate JWT tokens
 const generateToken = (user) => {
-  // return jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' });
   return jwt.sign(user, 'your_jwt_secret', { expiresIn: '1h' });
 };
 
@@ -165,12 +164,10 @@ app.get('/login', (req, res) => {
 
 // Middleware to authenticate JWT tokens
 const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+  const token = req.headers['authorization']?.split(' ')[1];
 
   if (token == null) return res.status(401).json({ error: 'Token missing' });
 
-  // jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, user) => {
   jwt.verify(token, 'your_jwt_secret', (err, user) => {
     if (err) return res.status(403).json({ error: 'Invalid token' });
     req.user = user;
@@ -182,24 +179,6 @@ const authenticateToken = (req, res, next) => {
 // app.get('/protected', authenticateToken, (req, res) => {
 //   res.json({ message: 'This is a protected route', user: req.user });
 // });
-
-// API to get watch records for the authenticated user
-app.get('/records', (req, res) => {
-  console.log('req.user:', req.user);
-  const user_id = req.user.id;
-
-  db.all(`SELECT Records.id, Media.title, Media.country_code, Media.year, Records.timestamp, Records.status
-          FROM Records
-          JOIN Media ON Records.media_id = Media.id
-          WHERE Records.user_id = ?`, [user_id], (err, rows) => {
-    if (err) {
-      console.error('Database query error:', err.message);
-      return res.status(500).json({ error: err.message });
-    }
-    res.json(rows);
-  });
-});
-
 
 // API to add a new watch record (for movies, dramas, etc.)
 app.post('/addRecord', authenticateToken, (req, res) => {
@@ -244,6 +223,22 @@ app.post('/addRecord', authenticateToken, (req, res) => {
           res.status(201).json({ message: 'Record added successfully' });
       });
     });
+  });
+});
+
+// API to get watch records for the authenticated user
+app.get('/records', authenticateToken, (req, res) => {
+  const user_id = req.user.id;
+
+  db.all(`SELECT Records.id, Media.title, Media.country_code, Media.year, Records.timestamp, Records.status
+          FROM Records
+          JOIN Media ON Records.media_id = Media.id
+          WHERE Records.user_id = ?`, [user_id], (err, rows) => {
+    if (err) {
+      console.error('Database query error:', err.message);
+      return res.status(500).json({ error: err.message });
+    }
+    res.json(rows);
   });
 });
 
