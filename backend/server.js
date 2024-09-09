@@ -229,10 +229,17 @@ app.post('/addRecord', authenticateToken, (req, res) => {
 // API to get watch records for the authenticated user
 app.get('/records', authenticateToken, (req, res) => {
   const user_id = req.user.id;
-
-  db.all(`SELECT Records.id, Media.title, Media.country_code, Media.year, Records.timestamp, Records.status
+  
+  db.all(`SELECT Records.id, Media.title, Media.country_code,
+                 Dramas.season AS d_s, Dramas.episode AS d_e,
+                 Variety_Shows.season AS vs_s, Variety_Shows.episode AS vs_e,
+                 Animations.season AS a_s, Animations.episode AS a_e,
+                 Media.year, Records.timestamp, Records.status
           FROM Records
           JOIN Media ON Records.media_id = Media.id
+          LEFT JOIN Dramas ON Dramas.media_id = Media.id
+          LEFT JOIN Variety_Shows ON Variety_Shows.media_id = Media.id
+          LEFT JOIN Animations ON Animations.media_id = Media.id
           WHERE Records.user_id = ?`, [user_id], (err, rows) => {
     if (err) {
       console.error('Database query error:', err.message);
