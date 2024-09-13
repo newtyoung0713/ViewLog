@@ -1,9 +1,9 @@
-// frontend/pages/addRecord.js
+// frontend/pages/newRecord.js
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import axios from 'axios';
 
-const AddRecord = () => {
+const NewRecord = () => {
   const [mediaType, setMediaType] = useState('');
   const [title, setTitle] = useState('');
   const [countryCode, setCountryCode] = useState('');
@@ -23,7 +23,7 @@ const AddRecord = () => {
     const token = localStorage.getItem('token');
     console.log(token);
     const recordData = {
-      mediaType, title, countryCode, year, status,
+      mediaType, title, countryCode, year, status
     };
 
     if (mediaType === 'drama' || mediaType === 'variety_show' || mediaType === 'animation') {
@@ -32,8 +32,8 @@ const AddRecord = () => {
     }
 
     try {
-      await axios.post('/api/addRecord', recordData, { headers: { Authorization: `Bearer ${token}` } });
-      router.push('/'); // Redirect to homepage or another page
+      await axios.post('/api/records/new', recordData, { headers: { Authorization: `Bearer ${token}` } });
+      router.push('/records'); // Redirect to homepage or another page
     } catch (error) {
       console.error('Error:', error.response ? error.response.data : error.message);
     }
@@ -41,7 +41,7 @@ const AddRecord = () => {
 
   return (
     <div>
-      <h1>Add Watch Record</h1>
+      <h1>New Watch Record</h1>
       <form onSubmit={handleSubmit}>
         <label htmlFor="mediaType">Media Type: </label>
         <select id="mediaType" value={mediaType} title="Select media type" onChange={(e) => setMediaType(e.target.value)}>
@@ -103,10 +103,10 @@ const AddRecord = () => {
             />
           </>
         )}
-        <button type="submit">Add Record</button>
+        <button type="submit">Add a Record</button>
       </form>
     </div>
   );
 };
 
-export default AddRecord;
+export default NewRecord;

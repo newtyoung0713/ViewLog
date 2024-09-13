@@ -39,7 +39,7 @@ function MyApp({ Component, pageProps }) {
         {isLoggedIn ? (
           <>
             <span>Welcome, {username || 'User'}!</span> <button href="#" onClick={handleLogout}>Log out</button>
-            <br /><Link href="/addRecord">Add a record</Link>
+            <br /><Link href="/newRecord">Add a record</Link>
           </>
         ) : (
           <>

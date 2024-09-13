@@ -42,14 +42,15 @@ const Records = () => {
     }
   }, [token]);
 
-  const handleEdit = (id) => { router.push(`/editRecord/${id}`) };
+  const handleEdit = (id) => { router.push(`/records/${id}`) };
 
   if (loading) return <div>Loading...</div>;  // Show loading message while waiting for data
   if (error) return <div>{error}</div>;  // Show error message if something went wrong
+
   return (
     <div>
       <h1>Your Watching Records</h1>
-      <button onClick={() => router.push('/addRecord')}>Add New Record</button>
+      <button onClick={() => router.push('/newRecord')}>Add New Record</button>
       {records.length > 0 ? (
         <ul>
           {records.map(record => (
