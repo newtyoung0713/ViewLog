@@ -181,7 +181,7 @@ const authenticateToken = (req, res, next) => {
 // });
 
 // API to add a new watch record (for movies, dramas, etc.)
-app.post('/addRecord', authenticateToken, (req, res) => {
+app.post('/records/new', authenticateToken, (req, res) => {
   const { mediaType, title, countryCode, year, season, episode, status } = req.body;
   const token = req.headers.authorization?.split(' ')[1]; // Bearer toke
   console.log(req.headers.authorization);
@@ -229,7 +229,7 @@ app.post('/addRecord', authenticateToken, (req, res) => {
 // API to get watch records for the authenticated user
 app.get('/records', authenticateToken, (req, res) => {
   const user_id = req.user.id;
-  
+
   db.all(`SELECT Records.id, Media.title, Media.country_code,
                  Dramas.season AS d_s, Dramas.episode AS d_e,
                  Variety_Shows.season AS vs_s, Variety_Shows.episode AS vs_e,
@@ -249,47 +249,78 @@ app.get('/records', authenticateToken, (req, res) => {
   });
 });
 
-// // API to get a watch record
-// app.get('/records/:id', (req, res) => {
-//   const userId = req.params.userId;
+// API to get a watch record
+app.get('/records/:id', (req, res) => {
+  const recordId = req.params.id;
 
-//   db.run(`SELECT Records.id, Media.title, Records.status, Media.year, Media.country_code
-//           FROM Records
-//           JOIN Media ON Records.media_id = Media.id
-//           WHERE Records.user_id = ?`,
-//     [userId], (err, rows) => {
-//       if (err) return res.status(500).json({ error: err.message });
-//       res.json(rows);
-//     }
-//   );
-// });
+  db.get(`SELECT Records.id, Media.title, Media.country_code,
+                 COALESCE(Dramas.season, Variety_Shows.season, Animations.season) AS season,
+                 COALESCE(Dramas.episode, Variety_Shows.episode, Animations.episode) AS episode,
+                 Media.year, Records.timestamp, Records.status
+          FROM Records
+          JOIN Media ON Records.media_id = Media.id
+          LEFT JOIN Dramas ON Dramas.media_id = Media.id
+          LEFT JOIN Variety_Shows ON Variety_Shows.media_id = Media.id
+          LEFT JOIN Animations ON Animations.media_id = Media.id
+          WHERE Records.id = ?`, [recordId], (err, rows) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json(rows);
+    }
+  );
+});
 
-// // API to update a watch record
-// app.put('/records/:id', (req, res) => {
-//   const record_id = req.params.id;
-//   const { progress, status } = req.body;
-//   const user_id = req.user.id;
+// API to update a watch record
+app.put('/records/:id', (req, res) => {
+  const recordId = req.params.id;
+  const { mediaType, title, countryCode, year, season, episode, status } = req.body;
 
-//   db.run(`UPDATE Records SET progress = ?, status = ? WHERE id = ? AND user_id = ?`,
-//     [progress, status, record_id, user_id],
-//     function (err) {
-//       if (err) return res.status(500).json({ error: err.message });
-//       if (this.changes === 0) return res.status(404).json({ error: 'Record Not Found' });
-//       res.json({ message: 'Record updated successfully' });
-//     }
-//   );
-// });
+  // Update the relevant fields in the database
+  // db.serialize(() => {
+    db.run(`UPDATE Records SET status = ? WHERE id = ?`, [status, recordId], function (err) {
+        if (err) return res.status(500).json({ error: err.message });
+  
+        // Update Media and related content (Dramas, Variety Shows, Animations) based on mediaType
+        db.run(`UPDATE Media SET title = ?, country_code = ?, year = ?
+                WHERE id = (SELECT media_id FROM Records WHERE id = ?)`, [title, countryCode, year, recordId], (err) => {
+          if (err) return res.status(500).json({ error: err.message });
+  
+          // Handle updates for specific types
+          if (mediaType === 'drama') {
+            db.run(`UPDATE Dramas SET season = ?, episode = ?
+                    WHERE media_id = (SELECT media_id FROM Records WHERE id = ?)`, [season, episode, recordId], (err) => {
+              if (err) return res.status(500).json({ error: err.message });
+              res.sendStatus(200);
+            });
+          } else if (mediaType === 'variety_show') {
+            db.run(`UPDATE Dramas SET season = ?, episode = ?
+                    WHERE media_id = (SELECT media_id FROM Records WHERE id = ?)`, [season, episode, recordId], (err) => {
+              if (err) return res.status(500).json({ error: err.message });
+              res.sendStatus(200);
+            });
+          } else if (mediaType === 'animation') {
+            db.run(`UPDATE Dramas SET season = ?, episode = ?
+                    WHERE media_id = (SELECT media_id FROM Records WHERE id = ?)`, [season, episode, recordId], (err) => {
+              if (err) return res.status(500).json({ error: err.message });
+              res.sendStatus(200);
+            });
+          } else {
+            res.sendStatus(200);
+          }
+        });
+    // });
+  });
+});
 
-// // API to delete a watch record
-// app.delete('/records/:id', (req, res) => {
-//   // const record_id = req.params.id;
-//   // const user_id = req.user.id;
+// API to delete a watch record
+app.delete('/records/:id', (req, res) => {
+  const recordId = req.params.id;
 
-//   db.run(`DELETE FROM Records WHERE id = ?`, [req.params.id], function (err) {
-//     if (err) return res.status(500).json({ error: err.message });
-//     res.json({ deleted: this.changes });
-//   });
-// });
+  db.run(`DELETE FROM Records WHERE id = ?`, [recordId], function (err) {
+    if (err) return res.status(500).json({ error: err.message });
+    // res.json({ deleted: this.changes });
+    res.sendStatus(200);
+  });
+});
 
 // // API to get a movie
 // app.get('/movies', (req, res) => {
