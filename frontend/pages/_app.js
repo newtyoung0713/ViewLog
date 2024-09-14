@@ -23,7 +23,7 @@ function MyApp({ Component, pageProps }) {
     localStorage.removeItem('username');
     setIsLoggedIn(false);
     setUsername('');
-    router.push('/login');
+    router.push('/');
   };
 
   const hideNavbar = router.pathname === '/login' || router.pathname === '/register';

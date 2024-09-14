@@ -55,7 +55,8 @@ const Records = () => {
         <ul>
           {records.map(record => (
             <li key={record.id}>
-              <span>{record.title}</span> |
+              <span>{record.type}</span> |
+              <span> {record.title}</span> |
               <span> {record.country_code}</span> |
               {record.d_s && record.d_e && (
                 <span> Season: {record.d_s}, Episode: {record.d_e}</span>
