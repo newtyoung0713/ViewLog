@@ -10,11 +10,21 @@ const Records = () => {
   const [error, setError] = useState(null); // Add an error state
   const router = useRouter();
 
+  // Type mapping, convert database values ​​into friendly display format
+  const typeMapping = {
+    movie: 'Movie',
+    variety_show: 'Variety Show',
+    drama: 'Drama',
+    animation: 'Animation',
+  }
+
   useEffect(() => {
     // This will run only in the client-side after the component mounts
     if (typeof window !== 'undefined') {
       const storedToken = localStorage.getItem('token');
       setToken(storedToken);
+      // // Assuming we store the username in localStorage as well
+      // const storeUsername = localStorage.getItem('username');
     }
   }, []);
 
@@ -32,10 +42,10 @@ const Records = () => {
           setRecords([]); // If data is not in the expected format, set records to an empty array
         }
         setLoading(false);
-        console.log('API response data:', response.data);
+        // console.log('API response data:', response.data);
       })
       .catch(error => {
-        console.error('Error fetching records:', error);
+        // console.error('Error fetching records:', error);
         setError('Failed to fetch records.');
         setLoading(false);
       });
@@ -49,33 +59,57 @@ const Records = () => {
 
   return (
     <div>
-      <h1>Your Watching Records</h1>
-      <button onClick={() => router.push('/newRecord')}>Add New Record</button>
-      {records.length > 0 ? (
-        <ul>
-          {records.map(record => (
-            <li key={record.id}>
-              <span>{record.type}</span> |
-              <span> {record.title}</span> |
-              <span> {record.country_code}</span> |
-              {record.d_s && record.d_e && (
-                <span> Season: {record.d_s}, Episode: {record.d_e}</span>
-              )}
-              {record.vs_s && record.vs_e && (
-                <span> Season: {record.vs_s}, Episode: {record.vs_e}</span>
-              )}
-              {record.a_s && record.a_e && (
-                <span> Season: {record.a_s}, Episode: {record.a_e}</span>
-              )} |
-              <span> {record.year}</span> |
-              <span> {record.status} </span>
-              <button onClick={() => handleEdit(record.id)}>Update</button>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <div>No Records Found</div>
-      )}
+      <div style={{ marginTop: '100px', textAlign: 'center' }}>
+        <h1>Your Watching Records</h1>
+        <button onClick={() => router.push('/newRecord')} style={{ marginBottom: '20px' }}>Add New Record</button>
+        {records.length > 0 ? (
+          <table style={{ margin: '0 auto', width: '80%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th>Title</th>
+                <th>Country</th>
+                <th>Season</th>
+                <th>Episode</th>
+                <th>Year</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+            </tbody>
+              {records.map((record, index) => (
+              <tr
+                key={record.id}
+                style={{
+                  // Alternate row background colors
+                  backgroundColor: index % 2 === 0 ? '#f9f9f9' : '#e0f7fa',
+                  borderTop: '1px solid #ddd'
+                }}
+              >
+                <td>{typeMapping[record.type] || record.type}</td>
+                <td> {record.title}</td>
+                <td> {record.country_code}</td>
+                <td>
+                  {record.d_s && `${record.d_s}`}
+                  {record.vs_s && `${record.vs_s}`}
+                  {record.a_s && `${record.a_s}`}
+                </td>
+                <td>
+                  {record.d_e && `${record.d_e}`}
+                  {record.vs_e && `${record.vs_e}`}
+                  {record.a_e && `${record.a_e}`}
+                </td>
+                <td> {record.year}</td>
+                <td> {record.status.charAt(0).toUpperCase() + record.status.slice(1)} </td>
+                <button onClick={() => handleEdit(record.id)}>Update</button>
+              </tr>
+            ))}
+          </table>
+        ) : (
+          <div>No Records Found</div>
+        )}
+      </div>
     </div>
   );
 };

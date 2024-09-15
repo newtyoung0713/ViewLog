@@ -37,10 +37,10 @@ function MyApp({ Component, pageProps }) {
       {!hideNavbar && (
       <nav>
         {isLoggedIn ? (
-          <>
-            <span>Welcome, {username || 'User'}!</span> <button href="#" onClick={handleLogout}>Log out</button>
-            <br /><Link href="/newRecord">Add a record</Link>
-          </>
+          <div className='welcome-container'>
+            <h4>Welcome, {username.charAt(0).toUpperCase() + username.slice(1)}!</h4>
+            <a className='logout-link' href="#" onClick={handleLogout}>Log out</a>
+          </div>
         ) : (
           <>
             <Link href="/login">Login</Link> | <Link href="/register">Register</Link>
@@ -49,6 +49,29 @@ function MyApp({ Component, pageProps }) {
       </nav>
       )}
       <Component {...pageProps} />
+
+      {/* Using CSS-in-JS */}
+      <style jsx>{`
+        .welcome-container {
+          position: absolute;
+          top: -10px;
+          right: 20px;
+          display: flex;
+          align-items: center;
+        }
+        .welcome-container h4 {
+          margin-right: 10px;
+        }
+        .logout-link {
+          color: #f44336;
+          text-decoration: none;
+          cursor: pointer;
+          font-weight: bold;
+        }
+        .logout-link:hover {
+          color: #d32f2f;
+        }
+      `}</style>
     </>
   );
 }
