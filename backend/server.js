@@ -8,7 +8,7 @@ const sqlite3 = require('sqlite3').verbose();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const path = require('path')
-const db = new sqlite3.Database(path.join(__dirname, 'viewlog.db'));   // Initial SQLite
+const db = new sqlite3.Database(path.join(__dirname, '../database/viewlog.db'));   // Initial SQLite
 
 const port = process.env.PORT || 5000;
 
