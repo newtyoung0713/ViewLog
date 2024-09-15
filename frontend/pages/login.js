@@ -77,33 +77,28 @@ const Login = () => {
           align-items: center;
           height: 80vh;
         }
-
         .input-wrapper {
           margin-bottom: 15px;
           display: flex;
           flex-direction: column;
         }
-
         .button-container {
           display: flex;
           justify-content: flex-end;
           margin-top: 20px;
         }
-
         form {
           background-color: #f2f2f2;
           padding: 20px;
           border-radius: 8px;
           box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
-
         input {
           padding: 10px;
           border: 1px solid #ccc;
           border-radius: 4px;
           width: 300px;
         }
-
         button {
           padding: 10px 15px;
           background-color: #4caf50;
@@ -112,7 +107,6 @@ const Login = () => {
           border-radius: 4px;
           cursor: pointer;
         }
-
         button:hover {
           background-color: #45a049;
         }

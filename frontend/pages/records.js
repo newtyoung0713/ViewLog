@@ -59,11 +59,13 @@ const Records = () => {
 
   return (
     <div>
-      <div style={{ marginTop: '100px', textAlign: 'center' }}>
+      <div className="record-container">
         <h1>Your Watching Records</h1>
-        <button onClick={() => router.push('/newRecord')} style={{ marginBottom: '20px' }}>Add New Record</button>
+        <div className="button-container">
+          <button className="button-new-record" onClick={() => router.push('/newRecord')}>Add New Record</button>
+        </div>
         {records.length > 0 ? (
-          <table style={{ margin: '0 auto', width: '80%', borderCollapse: 'collapse' }}>
+          <table>
             <thead>
               <tr>
                 <th>Type</th>
@@ -80,11 +82,11 @@ const Records = () => {
             </tbody>
               {records.map((record, index) => (
               <tr
+                className="record-line-color"
                 key={record.id}
                 style={{
                   // Alternate row background colors
-                  backgroundColor: index % 2 === 0 ? '#f9f9f9' : '#e0f7fa',
-                  borderTop: '1px solid #ddd'
+                  backgroundColor: index % 2 === 0 ? '#f9f9f9' : '#e0f7fa'
                 }}
               >
                 <td>{typeMapping[record.type] || record.type}</td>
@@ -102,7 +104,11 @@ const Records = () => {
                 </td>
                 <td> {record.year}</td>
                 <td> {record.status.charAt(0).toUpperCase() + record.status.slice(1)} </td>
-                <button onClick={() => handleEdit(record.id)}>Update</button>
+                <td>
+                  <div className="button-wrapper">
+                    <button onClick={() => handleEdit(record.id)}>Update</button>
+                  </div>
+                </td>
               </tr>
             ))}
           </table>
@@ -110,6 +116,58 @@ const Records = () => {
           <div>No Records Found</div>
         )}
       </div>
+
+      <style jsx>{`
+        .record-container {
+          margin-top: 100px;
+          text-align: center;
+        }
+        .button-container {
+          display: flex;
+          justify-content: center;
+          margin-top: 20px;
+        }
+        .button-new-record {
+          margin-bottom: 20px;
+        }
+        .button-wrapper {
+          display: flex;
+          // Ensures horizontal centering
+          justify-content: center;
+          // Ensures vertical centering
+          align-items: center;
+          height: 100%;
+        }
+        .record-line-color {
+          // Alternate row background colors
+          background-color: index % 2 === 0 ? #f9f9f9 : #e0f7fa;
+          border-top: 1px solid #ddd;
+        }
+        button {
+          padding: 10px 15px;
+          background-color: #4caf50;
+          color: white;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+        }
+        button:hover {
+          background-color: #45a049;
+        }
+        table {
+          margin: 0 auto;
+          width: 85%;
+          border-collapse: collapse;
+        }
+        thead th {
+          padding: 10px;
+          border-bottom: 1px solid #ddd;
+        }
+        td {
+          // Centers text with in table cells
+          text-align: center;
+        }
+      `}</style>
     </div>
   );
 };

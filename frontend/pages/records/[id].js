@@ -82,6 +82,17 @@ const EditRecord = () => {
         isEditMode={true}
         handleDelete={handleDelete}
       />
+
+      <style jsx>{`
+        div {
+          margin-top: 3%;
+        }
+        div h1 {
+          text-align: center;
+          margin-bottom: 20px;
+          color: #333;
+        }
+      `}</style>
     </div>
   );
 };

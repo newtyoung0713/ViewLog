@@ -61,6 +61,17 @@ const NewRecord = () => {
         submitButtonLabel="Add a new Record"
         isEditMode={false}
       />
+
+      <style jsx>{`
+        div {
+          margin-top: 8%;
+        }
+        h1 {
+          text-align: center;
+          margin-bottom: 20px;
+          color: #333;
+        }
+      `}</style>
     </div>
   );
 };
